@@ -130,7 +130,7 @@ fi
 
 #check default one's speed
 get_speed
-COST_TIME_LAST=$COST_TIME
+COST_TIME_BEST=$COST_TIME
 
 # try mirror, if fast, update COST_TIME_LAST and mirror_url
 
@@ -146,21 +146,26 @@ mirrors=("http://dockerhub.azk8s.cn"
 for(( i=0;i<${#mirrors[@]};i++)) do
   #${#mirrors[@]}获取数组长度用于循环
   echo "now try ${mirrors[i]}";
-  COST_TIME_LAST=$COST_TIME
   get_speed
   echo "Pulling test image took $(($COST_TIME/60))min $(($COST_TIME%60))s"
-  if [ $COST_TIME -lt $COST_TIME_LAST ]; then
+  if [ $COST_TIME -lt $COST_TIME_BEST ]; then
       echo "found better mirror...."
+      COST_TIME_BEST=$COST_TIME
       BEST_MIRROR="${mirrors[i]}"
+      echo "Now best mirror is $BEST_MIRROR"
+      sed -i "/--containerd=/cExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --registry-mirror=$BEST_MIRROR" /lib/systemd/system/docker.service
+      sleep 1
+      systemctl daemon-reload
+      systemctl restart docker
   fi
 done;
 
-if [ "" = "$BEST_MIRROR" ]; then
-  echo "no faster mirror found"
-else    
-  echo "Best mirror is ${BEST_MIRROR}"
-  sed -i "/--containerd=/cExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --registry-mirror=$BEST_MIRROR" /lib/systemd/system/docker.service
-fi
+#if [ "" = "$BEST_MIRROR" ]; then
+#  echo "no faster mirror found"
+#else    
+#  echo "Best mirror is ${BEST_MIRROR}"
+#  sed -i "/--containerd=/cExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --registry-mirror=$BEST_MIRROR" /lib/systemd/system/docker.service
+#fi
 
 
 }
