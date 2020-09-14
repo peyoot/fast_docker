@@ -82,6 +82,19 @@ prompt-yesno() {
   done
 }
 
+########## custom functions ###############
+
+get_speed() {
+  docker rmi -f $TEST_IMG >>/dev/null 2>&1
+  START_TIME=$(date +%s)
+  docker pull $TEST_IMG >>/dev/null 2>&1
+  END_TIME=$(date +%s)
+  COST_TIME=$[ $END_TIME-$START_TIME ]
+#  COST_TIME=$(($END_TIME-$START_TIME))
+}
+
+
+
 ####Check if run as root#######
 ROOTUID="0"
 if [ "$(id -u)" -ne "$ROOTUID" ] ; then
@@ -115,25 +128,13 @@ if [ ! -e /var/log/fast_docker.log ]; then
   echo "fast_docker installed" >> /var/log/fast_docker.log
 fi
 
+#check default one's speed
+get_speed
+COST_TIME_LAST=$COST_TIME
 
+# try mirror, if fast, update COST_TIME_LAST and mirror_url
 
-  #check default one's speed
-
-  echo "remove test image first"
-  docker rmi -f $TEST_IMG
-
-  START_TIME=$(date +%s)
-  echo "start to pulling test image ${TEST_IMG}"
-  docker pull $TEST_IMG
-  END_TIME=$(date +%s)
-  echo "end pulling at ${END_TIME}"
-  COST_TIME_LAST=$[ $END_TIME-$START_TIME ]
-  echo "Total cost $COST_TIME seconds"
-  echo "Pulling time for default dockerhub is $(($COST_TIME_LAST/60))min $(($COST_TIME_LAST%60))s"
-
-  # try mirror, if fast, update COST_TIME_LAST and mirror_url
-
-  mirrors=("http://dockerhub.azk8s.cn"
+mirrors=("http://dockerhub.azk8s.cn"
     "https://mirror.ccs.tencentyun.com"
     "http://f1361db2.m.daocloud.io"
     "http://hub-mirror.c.163.com"
@@ -142,24 +143,22 @@ fi
 ## adding more mirrors by using your own aliyun mirror url instead.
 
 
-
-
-  
-  for(( i=0;i<${#mirrors[@]};i++)) do
-#    #${#mirrors[@]}获取数组长度用于循环
-    echo "now try ${mirrors[i]}";
-    get_speed
-    if [ COST_TIME < COST_TIME_LAST ]; then
+for(( i=0;i<${#mirrors[@]};i++)) do
+  #${#mirrors[@]}获取数组长度用于循环
+  echo "now try ${mirrors[i]}";
+  COST_TIME_LAST=$COST_TIME
+  get_speed
+  echo "Pulling test image took $(($COST_TIME/60))min $(($COST_TIME%60))s"
+  if [ $COST_TIME -lt $COST_TIME_LAST ]; then
       echo "find better mirror...."
-      BEST_MIRROR="${mirrors[i]"
-    fi
-  done;
+      BEST_MIRROR="${mirrors[i]}"
+  fi
+done;
 
-if [ ! "" == "$BEST_MIRROR" ]; then
-
-#use best mirror
-
-
+if [ "" = "$BEST_MIRROR" ]; then
+  echo "no faster mirror found"
+else    
+  echo "Best mirror is ${BEST_MIRROR}"
 fi
 
 
@@ -167,6 +166,3 @@ fi
 }
 
 _ "$0" "$@"
-
-
-
