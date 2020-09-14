@@ -109,8 +109,8 @@ TEST_IMG=registry:2
 BEST_MIRROR=""
 
 if [ -e /lib/systemd/system/docker.service.bak ] && [ -e /var/log/fast_docker.log ]; then
-  echo "It seems it's not the first time you run the scipts. Your original docker configure file have already exist"
-  echo "Scripts will directly checkout fastest docker mirror and configre docker.service for you"
+  echo "It seems you've run the scipt before. Your original docker configure backup file is in place"
+  echo "Script will directly checkout fastest docker mirror and configre docker.service for you"
 else
   if [ -e /lib/systemd/system/docker.service.bak ]; then
     if prompt-yesno "docker systemd configure backup file already exist, would you like to overwrite it? " "no"; then
@@ -150,7 +150,7 @@ for(( i=0;i<${#mirrors[@]};i++)) do
   get_speed
   echo "Pulling test image took $(($COST_TIME/60))min $(($COST_TIME%60))s"
   if [ $COST_TIME -lt $COST_TIME_LAST ]; then
-      echo "find better mirror...."
+      echo "found better mirror...."
       BEST_MIRROR="${mirrors[i]}"
   fi
 done;
@@ -159,8 +159,8 @@ if [ "" = "$BEST_MIRROR" ]; then
   echo "no faster mirror found"
 else    
   echo "Best mirror is ${BEST_MIRROR}"
+  sed -i "/--containerd=/cExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --registry-mirror=$BEST_MIRROR" /lib/systemd/system/docker.service
 fi
-
 
 
 }
