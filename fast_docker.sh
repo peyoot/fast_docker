@@ -129,12 +129,19 @@ if [ ! -e /var/log/fast_docker.log ]; then
 fi
 
 #check default one's speed
+#get_speed
+#set azure china is default  mirror in case default one is block
+sed -i "/--containerd=/cExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --registry-mirror=https://dockerhub.azk8s.cn" /lib/systemd/system/docker.service
+systemctl daemon-reload
+systemctl restart docker
+sleep 1
 get_speed
+
 COST_TIME_BEST=$COST_TIME
 
 # try mirror, if fast, update COST_TIME_LAST and mirror_url
-
-mirrors=("http://dockerhub.azk8s.cn"
+# please use your own url if you got one
+mirrors=("https://registry.docker-cn.com"
     "https://mirror.ccs.tencentyun.com"
     "http://f1361db2.m.daocloud.io"
     "http://hub-mirror.c.163.com"
